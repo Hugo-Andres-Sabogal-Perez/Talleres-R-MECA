@@ -1,0 +1,123 @@
+
+# 1. Primer punto ----------------------------------------
+## 1.1. Semilla ------------------------------------------
+
+set.seed(55)
+
+## 1.2. Vectores -----------------------------------------
+
+id=c(1:50)
+edad=floor(runif(n=50, min=5, max=50))
+anhos=rep("años", 50)
+nombres=c("Camila", "Ana", "Gabriel", "Daniel","Salomón", "Hugo", "Santiago", 
+          "Sofía", "Gabriela", "Carlos", "Andrés", "Lina", "Alejandro",
+          "Andrea", "Julián", "Alejandra", "Isabel", "Ricardo", "Hernán", 
+          "Natalia", "Diana", "Carolina", "Juan", "David", "Diego", "Manuela", 
+          "Samuel", "Valeria", "Blanca", "Manuel", "Carla", "Juana", 
+          "Karen", "Martín", "Pablo", "Gonzalo", "Verónica", "María", "Paola", 
+          "Federico", "Tomás", "Isabella", "Alberto", "Tatiana", "José", 
+          "Enrique", "Juliana", "Camilo", "Valentina", "Paula")
+
+## 1.3. Concatenación ------------------------------------
+
+texto=paste(nombres, "tiene", edad, anhos)
+
+## 1.4. Loop ---------------------------------------------
+
+for(i in id) {
+  if(substr(nombres[i],1,1)!="J" & edad[i]%%2!=0) {
+    print(texto[i])
+  }
+}
+
+## 1.5. Función media y desviación estándar --------------
+
+mean_dev=function(x){
+  promedio=sum(x)/length(x)
+  desv_est=sqrt(sum((x-promedio)^2)/(length(x)-1))
+  output=c(promedio, desv_est)
+}
+
+print(mean_dev(edad))
+
+
+## 1.6. Función normal estándar --------------------------
+
+estandarizar = function(x) {
+  promedio = mean_dev(x)[1]
+  desv_est = mean_dev(x)[2]
+  x_estandar = (x-promedio)/desv_est
+  return(x_estandar)
+}
+
+## 1.7. Edad estandarizada -------------------------------
+
+edadstd=estandarizar(edad)
+hist(edadstd)
+
+## 1.8. Outcomes nominales -------------------------------
+
+e = rnorm(50, 0, 1)
+salario = 2 + 3*edadstd + e
+salud = 5 - 3*edadstd - edadstd^2 +e
+experiencia = 2 + e
+outcomes_nominales = list(salario, salud, experiencia)
+
+## 1.9. Función matrices ---------------------------------
+
+matriz_uno = function(x) {
+  uno = rep(1, length(x))
+  matriz = matrix(c(uno, x), ncol = 2, nrow = length(x))
+  return(matriz)
+}
+
+## 1.10. Matriz edad + uno -------------------------------
+
+edadstd_uno = matriz_uno(edadstd)
+
+# 2. Segundo Punto ---------------------------------------
+
+## 2.1. Función MCO --------------------------------------
+
+estimacion_mco = function(x, y) {
+  Beta_gorro = solve( t(x) %*% x ) %*% (t(x) %*% y)
+  predicy= x %*% Beta_gorro 
+  error=y-predicy
+  sigma=t(error)%*%error/(length(y) - ncol(x) )
+  sigma_beta_gorro= sqrt(as.double(sigma)*diag(solve( t(x) %*% x )))
+  return(c(Beta_gorro, sigma_beta_gorro))
+}
+
+## 2.2. Loop MCO -----------------------------------------
+
+resultados = matrix(NA, ncol = 4, nrow = length(outcomes_nominales),
+                    dimnames=list(c(1,2,3),c("Outcome", "Beta_0", "Beta_1", "Sigma_beta_1")))
+
+vector_palabras <- c('Salario', 'Indice de salud', 'Experiencia')
+
+for(i in 1:length(outcomes_nominales)) {
+  modelo = estimacion_mco(edadstd_uno, as.vector(outcomes_nominales[[i]]))
+  resultados[i, 1] = vector_palabras[i]
+  resultados[i, 2] = modelo[1]
+  resultados[i, 3] = modelo[2]
+  resultados[i, 4] = modelo[4]
+}
+
+print(resultados)
+
+## 2.3 Interpretación MCO ------------------------------
+
+"Este numeral esta resuelto en el pdf "
+
+
+
+## Comprobación de resultados MCO
+
+datos <- data.frame(c(outcomes_nominales),edadstd)
+names(datos) <- c('salario', 'indice_salud', 'exp', 'edadstd')
+
+summary(lm('salario ~ edadstd',data=datos) )
+summary(lm('indice_salud ~ edadstd',data=datos) )
+summary(lm('exp ~ edadstd',data=datos) )
+
+
