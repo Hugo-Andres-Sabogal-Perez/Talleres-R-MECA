@@ -36,7 +36,10 @@ gas_natural <- agregar_fechas_faltantes(gas_natural)
 carbon <- agregar_fechas_faltantes(carbon)
 gasolina <- agregar_fechas_faltantes(gasolina)
 
-## 1.5 Union de las bases de datos
+## 1.5 Union de las bases de datos -----------------------
+df_unido <- left_join(brent, carbon, by='fecha') %>% 
+             left_join(., gas_natural, by='fecha') %>% 
+              left_join(., gasolina, by='fecha') 
+  
 
-df_unido <- 
-
+## 1.6 Union de las bases de datos -----------------------
