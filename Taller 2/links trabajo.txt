@@ -1,3 +1,5 @@
 links trabajo
 
 https://www.statology.org/read-zip-file-in-r/
+
+https://www.tutorialspoint.com/how-to-create-a-vector-with-all-dates-in-a-particular-year-in-r
