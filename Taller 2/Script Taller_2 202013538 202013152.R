@@ -25,7 +25,7 @@ summary(ipc)
 ## 1.3. agregar fechas faltantes -------------------
 
 agregar_fechas_faltantes <- function(dataframe) {
-  fechas_completas <- data.frame(fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-31"),by="1 day"))
+  fechas_completas <- data.frame(fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 day"))
   data <- full_join(fechas_completas, dataframe, by=c("fecha"))
   return(data)
 }
@@ -42,4 +42,36 @@ df_unido <- left_join(brent, carbon, by='fecha') %>%
               left_join(., gasolina, by='fecha') 
   
 
-## 1.6 Union de las bases de datos -----------------------
+## 1.6 añadir variables de año y mes con lubridate -----------------------
+df_unido$mes <- month(df_unido$fecha, label=T)
+df_unido$año <-year(df_unido$fecha)
+
+
+## 1.7 tabla % NA y remplazo de NA -----------------------
+
+#Tabal de NA
+t(t(as.matrix(colMeans(is.na(df_unido)))))
+
+
+df_unido$precio_carbon <- df_unido$precio_carbon %>% 
+                          replace_na(mean(df_unido$precio_carbon,na.rm=T))
+
+df_unido$precio_gas_natural <- df_unido$precio_gas_natural %>% 
+                              replace_na(mean(df_unido$precio_gas_natural,na.rm=T))
+
+df_unido$precio_gasolina <- df_unido$precio_gasolina %>% 
+                               replace_na(mean(df_unido$precio_gasolina,na.rm=T))
+
+df_unido$precio_petroleo <- df_unido$precio_petroleo %>% 
+  replace_na(mean(df_unido$precio_petroleo,na.rm=T))
+
+
+
+## 1.8 agrupar por año-mes  -----------------------
+precios_mes <- df_unido %>% group_by(año,mes)  %>%
+                summarise(carbon=mean(precio_carbon),
+                          gas_natural = mean(precio_gas_natural),
+                          petroleo = mean(precio_petroleo),
+                          gasolina = mean(precio_gasolina))
+
+
