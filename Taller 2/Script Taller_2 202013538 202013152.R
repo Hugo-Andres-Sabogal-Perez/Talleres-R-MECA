@@ -21,12 +21,8 @@ summary(gasolina)
 summary(gas_natural)
 summary(ipc)
 
+## 1.3. Explicitar fechas faltantes
 
 
-head(brent)
 
-
- 
-length(intersect(carbon$fecha, brent$fecha))
-
-setdiff(as.character(carbon$fecha), as.character(brent$fecha))
+brent[['precio_pretroleo']]
