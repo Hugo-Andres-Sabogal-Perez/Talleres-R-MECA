@@ -5,6 +5,7 @@ rm(list = ls())
 
 library(readr)
 library(tidyverse)
+library(stargazer)
 
 # 1. Primer punto ----------------------------------------
 ## 1.1. importar bases de datos ------------------------------------------
@@ -73,5 +74,81 @@ precios_mes <- df_unido %>% group_by(año,mes)  %>%
                           gas_natural = mean(precio_gas_natural),
                           petroleo = mean(precio_petroleo),
                           gasolina = mean(precio_gasolina))
+
+##### 1.9 Función IPC ------------------------
+
+transform_precios_reales <- function(ind_ipc, año_base, mes_base,bien,datos){
+  
+  datos$ipc_mes <- rev(ipc[[ind_ipc]]) 
+  
+  precios_filtrados <- datos %>% filter(año==año_base, mes==mes_base)
+  
+  ipc_base <- precios_filtrados[['ipc_mes']]
+  
+  nombre_variable <- paste0(bien,'_', año_base, '_', mes_base, '_', 'transformada')
+  
+  datos[[nombre_variable]] <- (datos[[bien]]* ipc_base)/datos[['ipc_mes']]
+  
+  datos <- datos %>% select(-ipc_mes)
+  
+  return(datos)
+}
+
+##### 1.10 aplicar función a todos los bienes ------------------------
+precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'petroleo', precios_mes)
+precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'carbon', precios_reales)
+precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'gasolina', precios_reales)
+precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'gas_natural',precios_reales)
+
+
+##### 1.10 exportar bases de datos ------------------------
+
+write.csv(precios_reales, 'precios nomimales y constantes(ene 2018).csv')
+
+### 2.1 tabla estadisticas descriptivas 
+
+precios_mes <- ungroup(precios_mes)
+
+precios <- ungroup(precios_reales) %>% select(-año, -mes)
+stargazer(as.data.frame(precios_reales), summary=T, type='text')
+
+stargazer(as.data.frame(precios_reales), summary=T, type='html')
+
+### 2.2 Scatter plot ----------------------------
+
+
+scatter_plot <- ggplot(precios, aes(x = carbon_2018_ene_transformada, y = gasolina_2018_ene_transformada)) +
+  geom_point(color= 'royalblue')+
+  geom_smooth(method='lm', color='firebrick') +
+  theme_bw() +
+  labs(x = "Precio carbon (precios constantes ene 2018)", y = "Precio Gasolina (precios constantes ene 2018)", 
+       title='Grafico de dispersión Carbon vs gasolina') 
+
+scatter_plot
+
+ggsave("Views/scatter.pdf", width = 6, height = 4, plot = scatter_plot)
+
+### 2.2 Grafica serie de tiempo ----------------------------
+
+
+precios$fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 month")
+
+serie_tiempo<-ggplot(data=precios)  +
+  geom_line(aes(x = fecha, y = carbon_2018_ene_transformada, color='Carbon')) +
+  geom_line(aes(x = fecha, y = gasolina_2018_ene_transformada, color='Gasolina')) + 
+  geom_line(aes(x = fecha, y = gas_natural_2018_ene_transformada, color='Gas Natural')) + 
+  geom_line(aes(x = fecha, y = petroleo_2018_ene_transformada, color='Petroleo')) + 
+  scale_color_manual(values = c('springgreen', 'aquamarine3', 'royalblue3', 'slateblue3'),
+                     limits = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
+                     labels = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
+                     guide = guide_legend(override.aes = list(size = 4))) +
+  theme_bw() +
+  labs(x='Fecha', y='Precios reales (base Ene 2018) ', color='Bien') +
+  theme(axis.title = element_text(size = 16))
+
+
+serie_tiempo
+
+ggsave('outputs/uvr_prom.pdf',uvr_prom, dpi=300,width = 8, height = 6) 
 
 
