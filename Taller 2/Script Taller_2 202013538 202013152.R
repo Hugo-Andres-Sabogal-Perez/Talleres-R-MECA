@@ -159,3 +159,16 @@ serie_tiempo
 ggsave('views/serie_precios.pdf',serie_tiempo, dpi=300,width = 8, height = 6) 
 
 
+serie_tiempo2<-ggplot(data=precios)  +
+  geom_line(aes(x = fecha, y = carbon, color='Carbon')) +
+  geom_line(aes(x = fecha, y = gasolina, color='Gasolina')) + 
+  geom_line(aes(x = fecha, y = gas_natural, color='Gas Natural')) + 
+  geom_line(aes(x = fecha, y = petroleo, color='Petroleo')) + 
+  scale_color_manual(values = c('springgreen', 'aquamarine3', 'royalblue3', 'slateblue3'),
+                     limits = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
+                     labels = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
+                     guide = guide_legend(override.aes = list(size = 4))) +
+  theme_bw() +
+  labs(x='Fecha', y='Precios nominales ', color='Bien') +
+  theme(axis.title = element_text(size = 16))
+serie_tiempo2
