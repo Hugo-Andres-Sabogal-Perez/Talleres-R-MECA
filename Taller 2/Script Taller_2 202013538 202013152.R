@@ -9,6 +9,7 @@ setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/
 library(readr)
 library(tidyverse)
 library(stargazer)
+library(kableExtra)
 
 # 1. Primer punto ----------------------------------------
 ## 1.1. importar bases de datos ------------------------------------------
@@ -20,15 +21,13 @@ ipc <- read.csv(unzip('Datos_taller.zip', '1.2.5.IPC_Serie_variaciones.csv'),  d
 
 
 ## 1.2. Exploración bases de datos ------------------------------------------
-summary(carbon)
-summary(brent)
-summary(gasolina)
-summary(gas_natural)
-summary(ipc)
 
-## 1.3. agregar fechas faltantes -------------------
+stargazer(list(carbon, brent, gasolina, gas_natural, ipc), type='html', out="views/exploración.html")
 
-agregar_fechas_faltantes <- function(dataframe, columna_fecha) {
+
+## 1.3. agregar fechas faltantes --------------------------------------------
+
+agregar_fechas_faltantes <- function(dataframe, columna_fecha, columna_precio) {
   fechas_completas <- data.frame(seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 day")) %>%
     setNames(columna_fecha)
   data <- full_join(fechas_completas, dataframe, by=columna_fecha)
@@ -56,7 +55,10 @@ df_unido$año <-year(df_unido$fecha)
 ## 1.7 tabla % NA y remplazo de NA -----------------------
 
 #Tabla de NA
-tabla_NA <- as.matrix(colMeans(is.na(df_unido)))
+tabla_NA <- as.matrix(colMeans(is.na(df_unido[,2:5])))
+tabla_NA <- as.matrix(tabla_NA)
+colnames(tabla_NA) <- "Valores_faltantes"
+stargazer(tabla_NA, type="html", out="views/tabla_NAs.html")
 
 #Remplazar NA
 df_unido$precio_carbon <- df_unido$precio_carbon %>% 
@@ -117,9 +119,8 @@ write.csv(precios_reales, 'precios nomimales y constantes(ene 2000).csv')
 precios_mes <- ungroup(precios_mes)
 
 precios <- ungroup(precios_reales) %>% select(-año, -mes)
-stargazer(as.data.frame(precios_reales), summary=T, type='text')
 
-stargazer(as.data.frame(precios_reales), summary=T, type='html')
+stargazer(as.data.frame(precios_reales), summary=T, type='html', out="views/sum_precios_reales.html")
 
 ### 2.2 Scatter plot ----------------------------
 
@@ -151,7 +152,7 @@ serie_tiempo<-ggplot(data=precios)  +
                      guide = guide_legend(override.aes = list(size = 4))) +
   theme_bw() +
   labs(x='Fecha', y='Precios reales (base Ene 2000) ', color='Bien') +
-  theme(axis.title = element_text(size = 16))
+  theme(axis.title = element_text(size = 14))
 
 
 serie_tiempo
@@ -170,5 +171,5 @@ serie_tiempo2<-ggplot(data=precios)  +
                      guide = guide_legend(override.aes = list(size = 4))) +
   theme_bw() +
   labs(x='Fecha', y='Precios nominales ', color='Bien') +
-  theme(axis.title = element_text(size = 16))
+  theme(axis.title = element_text(size = 14))
 serie_tiempo2
