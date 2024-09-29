@@ -1,6 +1,9 @@
 #Limpiaar entorno
 rm(list = ls())
 
+#Directorio 
+setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/Talleres-R-MECA/Taller 2")
+
 # 1.Importmos liberias -----------------
 
 library(readr)
@@ -13,7 +16,7 @@ carbon <- read_csv(unzip('Datos_taller.zip', 'precios_carbon.csv'))
 brent <- read_csv(unzip('Datos_taller.zip', 'precios_petroleo.csv'))
 gasolina <- read_csv(unzip('Datos_taller.zip', 'precios_gasolina.csv'))
 gas_natural <- read_csv(unzip('Datos_taller.zip', 'precios_gas_natural.csv'))
-ipc <- read_csv(unzip('Datos_taller.zip', '1.2.5.IPC_Serie_variaciones.csv'))
+ipc <- read.csv(unzip('Datos_taller.zip', '1.2.5.IPC_Serie_variaciones.csv'),  dec=",")
 
 
 ## 1.2. Exploración bases de datos ------------------------------------------
@@ -25,17 +28,19 @@ summary(ipc)
 
 ## 1.3. agregar fechas faltantes -------------------
 
-agregar_fechas_faltantes <- function(dataframe) {
-  fechas_completas <- data.frame(fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 day"))
-  data <- full_join(fechas_completas, dataframe, by=c("fecha"))
+agregar_fechas_faltantes <- function(dataframe, columna_fecha) {
+  fechas_completas <- data.frame(seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 day")) %>%
+    setNames(columna_fecha)
+  data <- full_join(fechas_completas, dataframe, by=columna_fecha)
   return(data)
 }
 
+
 ## 1.4 aplicar la función del 1.3 -------------------------
-brent <- agregar_fechas_faltantes(brent)
-gas_natural <- agregar_fechas_faltantes(gas_natural)
-carbon <- agregar_fechas_faltantes(carbon)
-gasolina <- agregar_fechas_faltantes(gasolina)
+brent <- agregar_fechas_faltantes(brent, "fecha")
+gas_natural <- agregar_fechas_faltantes(gas_natural, "fecha")
+carbon <- agregar_fechas_faltantes(carbon, "fecha")
+gasolina <- agregar_fechas_faltantes(gasolina, "fecha")
 
 ## 1.5 Union de las bases de datos -----------------------
 df_unido <- left_join(brent, carbon, by='fecha') %>% 
@@ -50,10 +55,10 @@ df_unido$año <-year(df_unido$fecha)
 
 ## 1.7 tabla % NA y remplazo de NA -----------------------
 
-#Tabal de NA
-t(t(as.matrix(colMeans(is.na(df_unido)))))
+#Tabla de NA
+tabla_NA <- as.matrix(colMeans(is.na(df_unido)))
 
-
+#Remplazar NA
 df_unido$precio_carbon <- df_unido$precio_carbon %>% 
                           replace_na(mean(df_unido$precio_carbon,na.rm=T))
 
@@ -77,7 +82,7 @@ precios_mes <- df_unido %>% group_by(año,mes)  %>%
 
 ##### 1.9 Función IPC ------------------------
 
-transform_precios_reales <- function(ind_ipc, año_base, mes_base,bien,datos){
+transform_precios_reales <- function(ind_ipc, año_base, mes_base, bien,datos){
   
   datos$ipc_mes <- rev(ipc[[ind_ipc]]) 
   
@@ -87,7 +92,7 @@ transform_precios_reales <- function(ind_ipc, año_base, mes_base,bien,datos){
   
   nombre_variable <- paste0(bien,'_', año_base, '_', mes_base, '_', 'transformada')
   
-  datos[[nombre_variable]] <- (datos[[bien]]* ipc_base)/datos[['ipc_mes']]
+  datos[[nombre_variable]] <- (datos[[bien]] * ipc_base)/datos[['ipc_mes']]
   
   datos <- datos %>% select(-ipc_mes)
   
@@ -95,15 +100,17 @@ transform_precios_reales <- function(ind_ipc, año_base, mes_base,bien,datos){
 }
 
 ##### 1.10 aplicar función a todos los bienes ------------------------
-precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'petroleo', precios_mes)
-precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'carbon', precios_reales)
-precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'gasolina', precios_reales)
-precios_reales <- transform_precios_reales ('Indice', '2018', 'ene', 'gas_natural',precios_reales)
+precios_reales <- transform_precios_reales ('Indice', '2000', 'ene', 'petroleo', precios_mes)
+precios_reales <- transform_precios_reales ('Indice', '2000', 'ene', 'carbon', precios_reales)
+precios_reales <- transform_precios_reales ('Indice', '2000', 'ene', 'gasolina', precios_reales)
+precios_reales <- transform_precios_reales ('Indice', '2000', 'ene', 'gas_natural',precios_reales)
+
+precios_reales$ipc_mes <- rev(ipc[["Indice"]]) 
 
 
 ##### 1.10 exportar bases de datos ------------------------
 
-write.csv(precios_reales, 'precios nomimales y constantes(ene 2018).csv')
+write.csv(precios_reales, 'precios nomimales y constantes(ene 2000).csv')
 
 ### 2.1 tabla estadisticas descriptivas 
 
@@ -117,11 +124,11 @@ stargazer(as.data.frame(precios_reales), summary=T, type='html')
 ### 2.2 Scatter plot ----------------------------
 
 
-scatter_plot <- ggplot(precios, aes(x = carbon_2018_ene_transformada, y = gasolina_2018_ene_transformada)) +
+scatter_plot <- ggplot(precios, aes(x = carbon_2000_ene_transformada, y = gasolina_2000_ene_transformada)) +
   geom_point(color= 'royalblue')+
   geom_smooth(method='lm', color='firebrick') +
   theme_bw() +
-  labs(x = "Precio carbon (precios constantes ene 2018)", y = "Precio Gasolina (precios constantes ene 2018)", 
+  labs(x = "Precio carbon (precios constantes ene 2000)", y = "Precio Gasolina (precios constantes ene 2000)", 
        title='Grafico de dispersión Carbon vs gasolina') 
 
 scatter_plot
@@ -134,21 +141,21 @@ ggsave("Views/scatter.pdf", width = 6, height = 4, plot = scatter_plot)
 precios$fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 month")
 
 serie_tiempo<-ggplot(data=precios)  +
-  geom_line(aes(x = fecha, y = carbon_2018_ene_transformada, color='Carbon')) +
-  geom_line(aes(x = fecha, y = gasolina_2018_ene_transformada, color='Gasolina')) + 
-  geom_line(aes(x = fecha, y = gas_natural_2018_ene_transformada, color='Gas Natural')) + 
-  geom_line(aes(x = fecha, y = petroleo_2018_ene_transformada, color='Petroleo')) + 
+  geom_line(aes(x = fecha, y = carbon_2000_ene_transformada, color='Carbon')) +
+  geom_line(aes(x = fecha, y = gasolina_2000_ene_transformada, color='Gasolina')) + 
+  geom_line(aes(x = fecha, y = gas_natural_2000_ene_transformada, color='Gas Natural')) + 
+  geom_line(aes(x = fecha, y = petroleo_2000_ene_transformada, color='Petroleo')) + 
   scale_color_manual(values = c('springgreen', 'aquamarine3', 'royalblue3', 'slateblue3'),
                      limits = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      labels = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      guide = guide_legend(override.aes = list(size = 4))) +
   theme_bw() +
-  labs(x='Fecha', y='Precios reales (base Ene 2018) ', color='Bien') +
+  labs(x='Fecha', y='Precios reales (base Ene 2000) ', color='Bien') +
   theme(axis.title = element_text(size = 16))
 
 
 serie_tiempo
 
-ggsave('outputs/uvr_prom.pdf',uvr_prom, dpi=300,width = 8, height = 6) 
+ggsave('views/serie_precios.pdf',serie_tiempo, dpi=300,width = 8, height = 6) 
 
 
