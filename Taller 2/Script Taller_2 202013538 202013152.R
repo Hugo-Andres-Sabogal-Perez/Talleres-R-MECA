@@ -9,7 +9,6 @@ setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/
 library(readr)
 library(tidyverse)
 library(stargazer)
-library(kableExtra)
 
 # 1. Primer punto ----------------------------------------
 ## 1.1. importar bases de datos ------------------------------------------
@@ -34,11 +33,16 @@ stargazer(as.data.frame(ipc[,2:5]), summary=T, type='html', out="views/exploraci
 
 ## 1.3. agregar fechas faltantes --------------------------------------------
 
-agregar_fechas_faltantes <- function(dataframe, columna_fecha, columna_precio) {
+agregar_fechas_faltantes <- function(dataframe, columna_fecha) {
+  #Se crea un dataframe con todas las fechas entre el primero de enero de 2001 y el primero de enero de 2024
+  #Se asigna el nombre del argomento columna_fecha a la fecha en el dataframe "fechas_completas"
   fechas_completas <- data.frame(seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 day")) %>%
     setNames(columna_fecha)
+  #se unen las bases de datos utilizando la columna_fecha como identificador único de las observaciones
   data <- full_join(fechas_completas, dataframe, by=columna_fecha)
+  #retorna la base de datos con las fechas completas
   return(data)
+  #Esta función va a servir sin importar el nombre de la columna de precios, por esta razón no se incluye ese parámetro
 }
 
 
@@ -93,16 +97,22 @@ precios_mes <- df_unido %>% group_by(año,mes)  %>%
 
 transform_precios_reales <- function(ind_ipc, año_base, mes_base, bien,datos){
   
+  # Añadimos el IPC al datafrane (Se invierte dado que tienen orden opuesto de fechas)
   datos$ipc_mes <- rev(ipc[[ind_ipc]]) 
   
+  #Filtramos por año y mes base
   precios_filtrados <- datos %>% filter(año==año_base, mes==mes_base)
   
+  # LLamamos el dato de IPC base
   ipc_base <- precios_filtrados[['ipc_mes']]
   
+  # Se crea el nombre de la variable
   nombre_variable <- paste0(bien,'_', año_base, '_', mes_base, '_', 'transformada')
   
+  #Se crea la columna con el precio real del bien
   datos[[nombre_variable]] <- (datos[[bien]] * ipc_base)/datos[['ipc_mes']]
   
+  # Se elimina la colummna de IPC
   datos <- datos %>% select(-ipc_mes)
   
   return(datos)
@@ -120,6 +130,10 @@ precios_reales$ipc_mes <- rev(ipc[["Indice"]])
 ##### 1.10 exportar bases de datos ------------------------
 
 write.csv(precios_reales, 'precios nomimales y constantes(ene 2000).csv')
+
+
+
+### Punto 2 -----------------------
 
 ### 2.1 tabla estadisticas descriptivas 
 
@@ -145,6 +159,7 @@ ggsave("Views/scatter.png", width = 6, height = 4, plot = scatter_plot)
 
 ### 2.2 Grafica serie de tiempo ----------------------------
 
+#Precios reales
 
 precios$fecha= seq(as.Date("2000-01-01"),as.Date("2024-01-01"),by="1 month")
 
@@ -166,6 +181,7 @@ serie_tiempo
 
 ggsave('views/serie_precios.png',serie_tiempo, dpi=300,width = 8, height = 6) 
 
+#Precios nominales 
 
 serie_tiempo2<-ggplot(data=precios)  +
   geom_line(aes(x = fecha, y = carbon, color='Carbon')) +
