@@ -22,7 +22,14 @@ ipc <- read.csv(unzip('Datos_taller.zip', '1.2.5.IPC_Serie_variaciones.csv'),  d
 
 ## 1.2. Exploración bases de datos ------------------------------------------
 
-stargazer(list(carbon, brent, gasolina, gas_natural, ipc), type='html', out="views/exploración.html")
+summary(carbon)
+summary(brent)
+summary(gas_natural)
+summary(gasolina)
+summary(ipc)
+
+stargazer(as.data.frame(list(carbon, gasolina, gas_natural, brent)), summary=T, type='html', out="views/exploración.html")
+stargazer(as.data.frame(ipc[,2:5]), summary=T, type='html', out="views/exploración_ipc.html")
 
 
 ## 1.3. agregar fechas faltantes --------------------------------------------
@@ -55,9 +62,9 @@ df_unido$año <-year(df_unido$fecha)
 ## 1.7 tabla % NA y remplazo de NA -----------------------
 
 #Tabla de NA
-tabla_NA <- as.matrix(colMeans(is.na(df_unido[,2:5])))
+tabla_NA <- cbind(colMeans(is.na(df_unido[,2:5])*100), colSums(is.na(df_unido[,2:5])))
 tabla_NA <- as.matrix(tabla_NA)
-colnames(tabla_NA) <- "Valores_faltantes"
+colnames(tabla_NA) <- c("Porcentaje", "N")
 stargazer(tabla_NA, type="html", out="views/tabla_NAs.html")
 
 #Remplazar NA
@@ -129,12 +136,12 @@ scatter_plot <- ggplot(precios, aes(x = carbon_2000_ene_transformada, y = gasoli
   geom_point(color= 'royalblue')+
   geom_smooth(method='lm', color='firebrick') +
   theme_bw() +
-  labs(x = "Precio carbon (precios constantes ene 2000)", y = "Precio Gasolina (precios constantes ene 2000)", 
-       title='Grafico de dispersión Carbon vs gasolina') 
+  labs(x = "Precio real del Carbón", y = "Precio real de la Gasolina", 
+       title='Precios reales (base enero del 2000): Carbón vs Gasolina') 
 
 scatter_plot
 
-ggsave("Views/scatter.pdf", width = 6, height = 4, plot = scatter_plot)
+ggsave("Views/scatter.png", width = 6, height = 4, plot = scatter_plot)
 
 ### 2.2 Grafica serie de tiempo ----------------------------
 
@@ -146,18 +153,18 @@ serie_tiempo<-ggplot(data=precios)  +
   geom_line(aes(x = fecha, y = gasolina_2000_ene_transformada, color='Gasolina')) + 
   geom_line(aes(x = fecha, y = gas_natural_2000_ene_transformada, color='Gas Natural')) + 
   geom_line(aes(x = fecha, y = petroleo_2000_ene_transformada, color='Petroleo')) + 
-  scale_color_manual(values = c('springgreen', 'aquamarine3', 'royalblue3', 'slateblue3'),
+  scale_color_manual(values = c('aquamarine3', 'chartreuse3', 'royalblue3', 'darkblue'),
                      limits = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      labels = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      guide = guide_legend(override.aes = list(size = 4))) +
   theme_bw() +
-  labs(x='Fecha', y='Precios reales (base Ene 2000) ', color='Bien') +
+  labs(x='Fecha', y='Precios reales (base: enero del 2000) ',  title='Precios reales históricos de los combustibles (2000-2024)', color='Bien') +
   theme(axis.title = element_text(size = 14))
 
 
 serie_tiempo
 
-ggsave('views/serie_precios.pdf',serie_tiempo, dpi=300,width = 8, height = 6) 
+ggsave('views/serie_precios.png',serie_tiempo, dpi=300,width = 8, height = 6) 
 
 
 serie_tiempo2<-ggplot(data=precios)  +
@@ -165,7 +172,7 @@ serie_tiempo2<-ggplot(data=precios)  +
   geom_line(aes(x = fecha, y = gasolina, color='Gasolina')) + 
   geom_line(aes(x = fecha, y = gas_natural, color='Gas Natural')) + 
   geom_line(aes(x = fecha, y = petroleo, color='Petroleo')) + 
-  scale_color_manual(values = c('springgreen', 'aquamarine3', 'royalblue3', 'slateblue3'),
+  scale_color_manual(values = c('aquamarine3', 'chartreuse3', 'royalblue3', 'darkblue'),
                      limits = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      labels = c('Carbon', 'Gasolina', 'Gas Natural', 'Petroleo'),
                      guide = guide_legend(override.aes = list(size = 4))) +
