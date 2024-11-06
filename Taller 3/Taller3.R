@@ -66,23 +66,32 @@ books <- "https://books.toscrape.com"
 
 ##2.2. Extraer información ---------------------------
 
-#Nombres de los libros
-nombres_libros <- books %>% 
-  read_html() %>%
-  html_nodes("article h3") %>%
-  html_text()
-#hay títulos que quedan cortados
+libros_df <- data.frame()
 
-#Precios de los libros
-precio_libros <- books %>%
-  read_html() %>%
-  html_nodes(".price_color") %>%
-  html_text()
+for(page in 1:50) {
+  #Link
+  link <- paste0(books, "/catalogue/page-", page, ".html")
+  
+  #Nombres de los libros
+  nombres_libros <- books %>% 
+    read_html() %>%
+    html_nodes("article h3 a") %>%
+    html_attr("title")
+  
+  #Precios de los libros
+  precio_libros <- books %>%
+    read_html() %>%
+    html_nodes(".price_color") %>%
+    html_text()
+  
+  #Crear base de datos
+  libros_df <- rbind(libros_df, data.frame(
+    Titulo = nombres_libros,
+    Precio = precio_libros,
+    stringsAsFactors = FALSE))
+  
+  #Registro de progreso
+  print(paste("Pagina:", page))
+}
 
-#Crear base de datos
-libros_df <- data.frame(
-  Titulo = nombres_libros,
-  Precio = precio_libros,
-  stringsAsFactors = FALSE
-)
 
