@@ -8,3 +8,5 @@ https://stackoverflow.com/questions/32066402/how-to-perform-multiple-left-joins-
 
 https://www.geeksforgeeks.org/how-to-reverse-the-order-of-a-dataframe-in-r/
 
+
+respuesta = [('A', 'C', 1), ('A', 'B', 2), ('C', 'B', 1), ('A', 'C', 3), ('B', 'A', 1),('B','C', 2), ('A', 'C', 1)]
