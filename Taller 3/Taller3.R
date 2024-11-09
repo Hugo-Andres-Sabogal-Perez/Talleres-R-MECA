@@ -13,7 +13,8 @@ library(rebus)
 library(tidyr)
 library(tm)
 library(wordcloud)
-
+library(stringr)
+library(ggplot2)
 
 #0.2. Directorio ------------------------------------
 
@@ -97,64 +98,109 @@ for(page in 1:50) {
     stringsAsFactors = FALSE))
   
   #Registro de progreso
-  print(paste("Pagina:", page))
+  print(paste("Página:", page))
 }
 
-##2.3. remover stop words, minusculas, eliminación de caracteres especiales y numeros -------
+##2.3. Linpieza de texto -----------------------------
 
 corpus <- Corpus(VectorSource(libros_df$Titulo))
 
-# procesamos el texto 
+# Procesamos el texto 
 corpus <- tm_map(corpus, content_transformer(tolower))  # Convertir a minúsculas
 corpus <- tm_map(corpus, removePunctuation)             # Eliminar puntuación
 corpus <- tm_map(corpus, removeNumbers)                 # Eliminar números
 corpus <- tm_map(corpus, removeWords, stopwords("english"))  # Eliminar palabras vacías (stop words)
 corpus <- tm_map(corpus, stripWhitespace)   
 
-# 2.4 creamos base con texto procesado (datos limpios) ---------------
+# 2.4 Base con texto procesado -----------------------
 datos_limpios <-  data.frame(titulo = sapply(corpus, as.character))
 
-# 2.5  creamos base count -----------------
-count <- data.frame(table(datos_limpios))
+# 2.7 matriz term frecuency---------------------------
 
-# 2.6 nube de palabras ----------------
+#De acuerdo con la aclaración que hizo Daniel en clase,
+#esto se debe hacer antes la nube de palabras
+
+dtm <- TermDocumentMatrix(corpus)
+
+# Aca ya lo puedo ver. 
+tdm <- as.matrix(dtm)
+tdm <- t(tdm)
+
+# 2.5  creamos base count ----------------------------
+count <- data.frame(colSums(tdm))
+
+# 2.6 nube de palabras -------------------------------
 wordcloud(
-  words = count$titulo, 
-  freq = count$Freq, 
+  words = rownames(count), 
+  freq = count$colSums.tdm., 
   min.freq = 1,            # Minimum frequency to include words
   max.words = 100,           # Maximum number of words
   random.order = FALSE,     # Arrange words by frequency
-  colors = brewer.pal(8, "Dark2"),  # Set color palette
-  scale =c(0.6,2)
+  colors = brewer.pal(1, "Dark2"),  # Set color palette
+  scale =c(3,0.5)
 )
 
 
-# 2.7 matriz term frecuency---------------
-dtm <- TermDocumentMatrix(corpus)
-# Aca ya lo puedo ver. 
-tdm <- as.matrix(dtm)
+# 2.8 Añadir columna de precio------------------------
 
-tdm <- t(tdm)
+datos_limpios <- data.frame(datos_limpios, libros_df$Precio)
 
+# 2.9  Seleccionar 10 palabras------------------------
 
-row.names(tdm) <- libros_df$Titulo
+# Filtrar las palabras con frecuencia mayor a 10 para escoger las palabras
+palabras_frecuentes <- tdm[, colSums(tdm) > 10]
 
-
-# 2.8 añadir columna de precio
-
-datos_limpios$precio <- libros_df$Precio
-
-# 2.9  Seleccionar 10 palabras
-
-
+# Escoger 10 palabras aleatorias dentro de las columnas de esta nueva base
 set.seed(72)
+nombres <- sample(colnames(palabras_frecuentes), 10)
 
-nombres <- sample(row.names(tdm),10)
+# Seleccionar las columnas correspondientes a las 10 palabras aleatorias
+matriz10 <- palabras_frecuentes[, nombres]
 
-matriz10 <- tdm[rownames(tdm) %in% nombres, ] 
+# Reemplazar valores mayores a 1 por uno para tener variables dummy
+matriz10[matriz10 > 1] <- 1
 
-rowSums(matriz10 )
+#Agregar las palabras a datos limpios
+datos_limpios <- data.frame(datos_limpios, matriz10)
 
+# 2.10. Agrupar precio por palabras -------------------
 
+# Primero, se aseguran de que los precios estén en formato numérico para poder hacer cálculos
+names(datos_limpios)[names(datos_limpios) == "libros_df.Precio"] <- "Precio"
+datos_limpios$Precio <- str_remove_all(datos_limpios$Precio, "£")
+datos_limpios$Precio <- as.numeric(datos_limpios$Precio)
 
-colSums(tdm)
+# Agrupamos por palabra y calculamos el promedio del precio
+
+resultados <- data.frame()
+
+# Iterar sobre cada palabra
+for (palabra in nombres) {
+  # Convertir el nombre de la palabra en símbolo para usarlo en group_by
+  columna_palabra <- ensym(palabra)
+  
+  # Agrupar por si contiene o no la palabra y calcular el promedio de precio
+  resultado <- datos_limpios %>%
+    mutate(Contiene = ifelse(grepl(palabra, titulo), 1, 0)) %>%
+    group_by(Contiene) %>%
+    summarise(Promedio_Precio = mean(Precio, na.rm = TRUE)) %>%
+    mutate(Palabra = palabra) %>%
+    select(Palabra, Contiene, Promedio_Precio)
+  
+  # Agregar el resultado al dataframe final
+  resultados <- bind_rows(resultados, resultado)
+}
+
+# 2.11. Visualización ---------------------------------
+resultados <- resultados %>%
+  mutate(Contiene = ifelse(Contiene == 1, "Si", "No"))
+
+ggplot(resultados, aes(x = Palabra, y = Promedio_Precio, fill = Contiene)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.5), width = 1.1) +  # 'dodge' para barras lado a lado
+  labs(title = "Precio promedio de libros según \n palabras en el título",
+       x = "Palabra",
+       y = "Precio promedio",
+       fill = "Contiene la palabra") +
+  theme_minimal() +
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) +
+  coord_flip()
