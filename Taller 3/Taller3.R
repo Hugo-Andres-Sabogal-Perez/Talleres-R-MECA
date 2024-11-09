@@ -11,6 +11,8 @@ library(rvest)
 library(tidytext)
 library(rebus)
 library(tidyr)
+library(tm)
+library(wordcloud)
 
 
 #0.2. Directorio ------------------------------------
@@ -77,13 +79,13 @@ for(page in 1:50) {
   link <- paste0(books, "/catalogue/page-", page, ".html")
   
   #Nombres de los libros
-  nombres_libros <- books %>% 
+  nombres_libros <- link %>% 
     read_html() %>%
     html_nodes("article h3 a") %>%
     html_attr("title")
   
   #Precios de los libros
-  precio_libros <- books %>%
+  precio_libros <- link %>%
     read_html() %>%
     html_nodes(".price_color") %>%
     html_text()
@@ -127,9 +129,32 @@ wordcloud(
 )
 
 
-# 2.7 matriz term frecuency
+# 2.7 matriz term frecuency---------------
 dtm <- TermDocumentMatrix(corpus)
 # Aca ya lo puedo ver. 
 tdm <- as.matrix(dtm)
 
+tdm <- t(tdm)
 
+
+row.names(tdm) <- libros_df$Titulo
+
+
+# 2.8 añadir columna de precio
+
+datos_limpios$precio <- libros_df$Precio
+
+# 2.9  Seleccionar 10 palabras
+
+
+set.seed(72)
+
+nombres <- sample(row.names(tdm),10)
+
+matriz10 <- tdm[rownames(tdm) %in% nombres, ] 
+
+rowSums(matriz10 )
+
+
+
+colSums(tdm)
