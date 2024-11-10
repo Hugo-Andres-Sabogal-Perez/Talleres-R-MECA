@@ -18,7 +18,7 @@ library(ggplot2)
 
 #0.2. Directorio ------------------------------------
 
-setwd("C:/Users/hugos/OneDrive - Universidad de los andes/MECA/Semestre 1/taller R/Talleres-R-MECA/Taller 3")
+setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/Talleres-R-MECA/Taller 3")
 
 # Punto 1 -------------------------------------------
 
@@ -40,28 +40,34 @@ panel_cede <- panel_cede %>% select(contains("cod") | contains("pob"),
 
 df_completo <- shapefile_col %>% left_join(panel_cede, by = "codmpio") 
 
-#Aquí perdí 100 observaciones pero no sé por qué (Pueden ser San Andrés y Providencia del panel CEDE?)
-
 ##1.4. Mapa interactivo -----------------------------
 
+# Seleccionar los datos de 2009 para el mapa
 datos_mapa <- subset(df_completo, df_completo$ano == 2009)
 
+# Crear una nueva columna en `datos_mapa` para el tooltip
+datos_mapa$tooltip_text <- paste("Departamento:", datos_mapa$dpto_cnmbr, "<br>",
+                                 "Municipio:", datos_mapa$mpio_cnmbr, "<br>",
+                                 "Población Rural:", scales::comma(datos_mapa$pobl_rur))
+
+# Crear el mapa con ggplot
 mapa <- ggplot(data = datos_mapa) +
-  geom_sf(aes(fill = pobl_rur), size = 0.1) +  # Color y borde de los municipios
+  geom_sf(aes(fill = pobl_rur, 
+              # Asignar la columna creada al tooltip
+              text = tooltip_text), 
+          size = 0.1) +  # Color y borde de los municipios
   scale_fill_viridis_c(name = "Población Rural", option = "viridis", labels = scales::comma) +  # Escala de color
   labs(title = "Mapa de Población Rural por Municipio (2009)") +
   theme_minimal() +
   theme(
-    plot.title = element_text(size = 12, face = "bold"),
-    legend.position = "bottom")
+    plot.title = element_text(size = 12, face = "bold"))
 
+# Convertir el mapa en un mapa interactivo utilizando ggplotly y especificando el tooltip
+mapa_interactivo <- ggplotly(mapa, tooltip = "text")
 
+mapa_interactivo
 
-mapa
-
-mapa_interactivo <- ggplotly(mapa)
-
-mapa_interactivo 
+save_html(mapa_interactivo, "mapa_interactivo.html")
 
 # Punto 2 --------------------------------------------
 
@@ -133,13 +139,12 @@ count <- data.frame(colSums(tdm))
 wordcloud(
   words = rownames(count), 
   freq = count$colSums.tdm., 
-  min.freq = 1,            # Minimum frequency to include words
-  max.words = 100,           # Maximum number of words
+  min.freq = 2,            # Mínima frecuencia de palabras a incluir
+  max.words = 100,           # Máximo número de palabras en la nube
   random.order = FALSE,     # Arrange words by frequency
   colors = brewer.pal(1, "Dark2"),  # Set color palette
-  scale =c(3,0.5)
+  scale =c(4,0.6)
 )
-
 
 # 2.8 Añadir columna de precio------------------------
 
