@@ -3,22 +3,20 @@ rm(list = ls())
 
 #0.1. Librerías -------------------------------------
 
-library(tidyverse)
-library(sf)
-library(openxlsx)
-library(plotly)
-library(rvest)
-library(tidytext)
-library(rebus)
-library(tidyr)
-library(tm)
-library(wordcloud)
-library(stringr)
-library(ggplot2)
+install.packages('pacman')
+
+library(pacman)
+
+p_load(
+  tidyverse, sf, openxlsx, plotly, rvest, tidytext, rebus,
+  tidyr, tm, wordcloud, stringr, ggplot2, htmltools
+)
 
 #0.2. Directorio ------------------------------------
 
-setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/Talleres-R-MECA/Taller 3")
+# setwd("C:/Users/Natalia/OneDrive - Universidad de los Andes/Documentos/2024-2/R/Talleres-R-MECA/Taller 3")
+
+setwd("C:/Users/hugos/OneDrive - Universidad de los andes/MECA/Semestre 1/taller R/Talleres-R-MECA/Taller 3")
 
 # Punto 1 -------------------------------------------
 
@@ -45,7 +43,7 @@ df_completo <- shapefile_col %>% left_join(panel_cede, by = "codmpio")
 # Seleccionar los datos de 2009 para el mapa
 datos_mapa <- subset(df_completo, df_completo$ano == 2009)
 
-# Crear una nueva columna en `datos_mapa` para el tooltip
+# Crear una nueva columna para el texto que debe aparecer al seleccionar los municipios en el mapa interactivo
 datos_mapa$tooltip_text <- paste("Departamento:", datos_mapa$dpto_cnmbr, "<br>",
                                  "Municipio:", datos_mapa$mpio_cnmbr, "<br>",
                                  "Población Rural:", scales::comma(datos_mapa$pobl_rur))
@@ -62,8 +60,10 @@ mapa <- ggplot(data = datos_mapa) +
   theme(
     plot.title = element_text(size = 12, face = "bold"))
 
-# Convertir el mapa en un mapa interactivo utilizando ggplotly y especificando el tooltip
-mapa_interactivo <- ggplotly(mapa, tooltip = "text")
+mapa
+
+# Convertir el mapa en un mapa interactivo utilizando ggplotly 
+mapa_interactivo <- ggplotly(mapa, tooltip = "text") #Tooltip especifica el texto que aparece al seleccionar los municipios
 
 mapa_interactivo
 
@@ -142,7 +142,7 @@ wordcloud(
   min.freq = 2,            # Mínima frecuencia de palabras a incluir
   max.words = 100,           # Máximo número de palabras en la nube
   random.order = FALSE,     # Arrange words by frequency
-  colors = brewer.pal(1, "Dark2"),  # Set color palette
+  colors = brewer.pal(1, "Dark2"),  # Paleta de colores
   scale =c(4,0.6)
 )
 
@@ -201,7 +201,7 @@ resultados <- resultados %>%
   mutate(Contiene = ifelse(Contiene == 1, "Si", "No"))
 
 ggplot(resultados, aes(x = Palabra, y = Promedio_Precio, fill = Contiene)) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.5), width = 1.1) +  # 'dodge' para barras lado a lado
+  geom_bar(stat = "identity", position = position_dodge(width = 0.5), width = 1.1) +  
   labs(title = "Precio promedio de libros según \n palabras en el título",
        x = "Palabra",
        y = "Precio promedio",
