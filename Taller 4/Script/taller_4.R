@@ -115,3 +115,4 @@ ggsave(
 
 mapa_interactivo <- ggplotly(mapa_base, tooltip = "text")
 
+mapa_interactivo
