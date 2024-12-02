@@ -7,7 +7,8 @@ if (!requireNamespace("pacman", quietly = TRUE)) {
   install.packages("pacman")
 }
 library("pacman")
-p_load(sf, tidyverse, fastDummies, ggplot2, plotly, stringr)
+p_load(sf, tidyverse, fastDummies, ggplot2, plotly, stringr, 
+       rmapshaper, dplyr, shiny)
 
 ## 0.2. Directorio ------------------------------------------------
 # Obtener el nombre de usuario del sistema operativo
@@ -69,17 +70,13 @@ exportaciones_col$TradeValueCateg <- cut(
 #Unir datos de exportaciones con shapefile
 exportaciones_col <- exportaciones_col %>% left_join(mundo, by="PartnerISO3")
 
-#Crear el texto que va a aparecer al seleccionar los países en el mapa interactivo
-exportaciones_col$tooltip_text <- paste("País:", exportaciones_col$PartnerName, "<br>",
-                                 "Valor Exportaciones:", exportaciones_col$TradeValue1000USD, "<br>")
-
-
-# Crear el mapa base
+## 1.10. Mapa de exportaciones con grilla por tipo de produco ---------------
+#Crear el mapa base
 mapa_base <- ggplot(exportaciones_col) + 
-  geom_sf(aes(fill = TradeValueCateg, geometry = geometry,
-              text = tooltip_text)) + 
+  geom_sf(aes(fill = TradeValueCateg, geometry = geometry)) + 
   scale_fill_brewer(palette = "Set2", 
-                    name = "Quitiles de exportaciones (miles de USD)", na.value = "grey90") +
+                    name = "Quitiles de exportaciones (miles de USD)",
+                    na.value = "grey90") +
   facet_wrap(~ ProductDescEsp, ncol = 3) + 
   labs(title = "Exportaciones de Colombia por Categorias de Productos",
        caption = "Fuente: Elaboración propia con datos del World Integrated Trade System (WITS)") +
@@ -94,8 +91,13 @@ mapa_base <- ggplot(exportaciones_col) +
     plot.title = element_text(hjust = 0.5, size = 12, face = "bold")  # Título centrado
   ) 
 
+
+mapa_interactivo <- ggplotly(mapa_base)
+
+mapa_interactivo
+
+#Mapa para poner en el documento 
 mapa_ajustado <- mapa_base + 
-  facet_wrap(~ ProductDescEsp, ncol = 3) +
   theme(legend.position = "bottom",   # Posición de la leyenda
         legend.direction = "horizontal")+
   guides(
@@ -113,6 +115,63 @@ ggsave(
   dpi = 300                           # Resolution in dots per inch
 )
 
-mapa_interactivo <- ggplotly(mapa_base, tooltip = "text")
+## 1.11. Crear Shiny ----------------------------------------------------
 
-mapa_interactivo
+# UI
+ui <- fluidPage(
+  titlePanel("Exportaciones de Colombia por Categoría de Producto"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        inputId = "selected_product",
+        label = "Selecciona una categoría de producto:",
+        choices = unique(exportaciones_col$ProductDescEsp),
+        selected = unique(exportaciones_col$ProductDescEsp)[1]
+      )
+    ),
+    
+    mainPanel(
+      plotlyOutput("export_map")
+    )
+  )
+)
+
+# Server
+server <- function(input, output) {
+  output$export_map <- renderPlotly({
+    # Filter the data based on the selected product
+    filtered_data <- exportaciones_col %>%
+      filter(ProductDescEsp == input$selected_product)
+    
+    # Create the map
+    mapa_base <- ggplot(filtered_data) +
+      geom_sf(aes(
+        fill = TradeValueCateg,
+        geometry = geometry)) +
+      scale_fill_brewer(
+        palette = "Set2",
+        name = "Quintiles de exportaciones (miles de USD)",
+        na.value = "grey90"
+      ) +
+      labs(
+        title = paste("Exportaciones de Colombia:", input$selected_product),
+        caption = "Fuente: Elaboración propia con datos del WITS"
+      ) +
+      theme_minimal()
+    
+    # Convert the ggplot object to an interactive plot
+    ggplotly(mapa_base)
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
+#Guardar App
+# Automatically save the UI and server to separate R files
+capture.output(cat(deparse(ui), sep = "\n"), file = "App/ui.R")
+capture.output(cat(deparse(server), sep = "\n"), file = "App/server.R")
+saveRDS(exportaciones_col, file = "App/exportaciones_col.rds")
+
+
