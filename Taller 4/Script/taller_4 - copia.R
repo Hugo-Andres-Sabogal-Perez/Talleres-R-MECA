@@ -36,33 +36,23 @@ exportaciones <- read.csv("Exports/DataJobID-2761539_2761539_ExportsCOL.csv")
 #Cambiar el nombre de la variable de ISO3 en mundo para facilitar la unión
 mundo <- mundo %>% rename(PartnerISO3 = shapeGroup)
 
-# Duplicar cada país 5 veces
-mundo <- mundo %>%
-  slice(rep(row_number(), each = 5))
-
-# Crear la variable productcode
-mundo <- mundo %>%
-  group_by(row_id = (row_number() - 1) %/% 5) %>% # Crear grupos por cada 5 repeticiones
-  mutate(ProductCode = (row_number() - 1) %% 5) %>% # Asignar valores de 0 a 4
-  ungroup() %>%
-  select(-row_id)  # Eliminar la columna auxiliar
-
-#Asignar cateogría segun product code
-mundo <- mundo %>%
-  mutate(ProductDescEsp = case_when(
-    ProductCode == 0 ~ "Agricultura, silvicultura y pesca",
-    ProductCode == 1 ~ "Minería, electricidad y gas",
-    ProductCode == 2 ~ "Alimentos, bebidas y tabaco",
-    ProductCode == 3 ~ "Otros bienes transportables",
-    ProductCode == 4 ~ "Productos metálicos y maquinaria",
-  ))
-
-
 #Mantener solo las exportaciones de colombia y seleccionar columnas relevantes
 exportaciones_col <- exportaciones %>% subset(ReporterISO3 == "COL") %>% #Mantenemos las
-  select(PartnerISO3, PartnerName, TradeValue.in.1000.USD,
+  select(PartnerISO3, PartnerName, TradeValue.in.1000.USD, ProductDescription,
          ProductCode) %>%
   rename(TradeValue1000USD = TradeValue.in.1000.USD) 
+
+#Traducir categorías de productos para la visualización
+translations <- c(
+  "ORES AND MINERALS; ELECTRICITY, GAS" = "Minería, electricidad y gas",
+  "FOOD PRODUCTS, BEVERAGES AND TOBACC" = "Alimentos, bebidas y tabaco",
+  "OTHER TRANSPORTABLE GOODS, EXCEPT M" = "Otros bienes transportables",
+  "METAL PRODUCTS, MACHINERY AND EQUIP" = "Productos metálicos y maquinaria",
+  "AGRICULTURE, FORESTRY AND FISHERY P" = "Agricultura, silvicultura y pesca"
+)
+
+exportaciones_col <- exportaciones_col %>%
+  mutate(ProductDescEsp = translations[ProductDescription])
 
 # Calcular quintiles de exportación para la visualización 
 quintiles <- quantile(exportaciones_col$TradeValue1000USD, probs = seq(0, 1, by = 0.2))
@@ -77,14 +67,14 @@ exportaciones_col$TradeValueCateg <- cut(
     round(quintiles[-1], 0)))
 
 #Unir datos de exportaciones con shapefile
-exportaciones_col <- exportaciones_col %>% right_join(mundo, by=c("PartnerISO3", "ProductCode"))
+exportaciones_col <- exportaciones_col %>% right_join(mundo, by="PartnerISO3")
+
 
 ## 1.10. Mapa de exportaciones con grilla por tipo de produco ---------------
 #Crear el mapa base
 mapa_base <- ggplot(exportaciones_col) + 
-  geom_sf(aes(fill = TradeValueCateg, geometry = geometry)) + 
-  scale_fill_brewer(palette = "Set2", 
-                    name = "Quitiles de exportaciones (miles de USD)", na.value = "grey70") +
+  geom_sf(aes(fill = TradeValue1000USD, geometry = geometry)) + 
+  scale_fill_viridis_c(name = "Exportaciones (USD)", na.value = "grey60") +
   facet_wrap(~ ProductDescEsp, ncol = 3) + 
   labs(title = "Exportaciones de Colombia por Categorias de Productos",
        caption = "Fuente: Elaboración propia con datos del World Integrated Trade System (WITS)") +
@@ -94,7 +84,6 @@ mapa_base <- ggplot(exportaciones_col) +
     axis.text.x = element_text(size = 4),    # Etiquetas del eje X más pequeñas
     axis.text.y = element_text(size = 4),     # Etiquetas del eje Y más pequeñas
     legend.title = element_text(size = 8),    # Título de la leyenda más pequeño
-    legend.text = element_text(size = 7),     #Texto de la leyenda más pequeño
     panel.spacing = unit(0.5, "lines"),        # Espaciado entre facetas
     plot.title = element_text(hjust = 0.5, size = 12, face = "bold")  # Título centrado
   ) 
@@ -107,17 +96,11 @@ mapa_interactivo
 #Mapa para poner en el documento 
 mapa_ajustado <- mapa_base + 
   theme(legend.position = "bottom",   # Posición de la leyenda
-        legend.direction = "horizontal") +
-  guides(
-    fill = guide_legend(
-      ncol = 3,                             # Número de columnas en la leyenda
-      byrow = TRUE                          # Ordenar la leyenda por filas
-    )
-  )
+        legend.direction = "horizontal")
 
 ggsave(
-  filename = "mapa_exportaciones.png", # File name and format
-  plot = mapa_ajustado,              # The plot object to save
+  filename = "mapa_base.png", # File name and format
+  plot = mapa_base,              # The plot object to save
   width = 10,                         # Width of the image in inches
   height = 8,                         # Height of the image in inches
   dpi = 300                           # Resolution in dots per inch
@@ -160,7 +143,7 @@ server <- function(input, output) {
       scale_fill_brewer(
         palette = "Set2",
         name = "Quintiles de exportaciones (miles de USD)",
-        na.value = "grey70"
+        na.value = "grey40"
       ) +
       labs(
         title = paste("Exportaciones de Colombia:", input$selected_product),
