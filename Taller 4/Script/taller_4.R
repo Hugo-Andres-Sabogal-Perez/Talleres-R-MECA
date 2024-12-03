@@ -174,4 +174,4 @@ capture.output(cat(deparse(ui), sep = "\n"), file = "App/ui.R")
 capture.output(cat(deparse(server), sep = "\n"), file = "App/server.R")
 saveRDS(exportaciones_col, file = "App/exportaciones_col.rds")
 
-
+#Miau
